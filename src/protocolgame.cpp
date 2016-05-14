@@ -2392,7 +2392,7 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 
 	if (version >= 1080) {
 		msg.addString(g_config.getString(ConfigManager::STORE_IMAGES_URL));
-		msg.addByte(g_config.getNumber(ConfigManager::STORE_COIN_PACKET));
+		msg.add<uint16_t>(static_cast<uint16_t>(g_config.getNumber(ConfigManager::STORE_COIN_PACKET)));
 	}
 
 	writeToOutputBuffer(msg);
