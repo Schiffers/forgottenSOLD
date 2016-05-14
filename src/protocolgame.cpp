@@ -2390,6 +2390,11 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 	msg.addByte(0x00); // can change pvp framing option
 	msg.addByte(0x00); // expert mode button enabled
 
+	if (version >= 1080) {
+		msg.addString(g_config.getString(ConfigManager::STORE_IMAGES_URL));
+		msg.addByte(g_config.getNumber(ConfigManager::STORE_COIN_PACKET));
+	}
+
 	writeToOutputBuffer(msg);
 
 	sendPendingStateEntered();
