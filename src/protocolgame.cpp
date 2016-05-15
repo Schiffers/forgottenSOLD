@@ -35,11 +35,13 @@
 #include "waitlist.h"
 #include "ban.h"
 #include "scheduler.h"
+#include "modules.h"
 
 extern ConfigManager g_config;
 extern Actions actions;
 extern CreatureEvents* g_creatureEvents;
 extern Chat* g_chat;
+extern Modules* g_modules;
 
 ProtocolGame::ProtocolGame(Connection_ptr connection) :
 	Protocol(connection),
@@ -412,6 +414,8 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 			return;
 		}
 	}
+
+	g_modules->executeOnRecvbyte(player, msg, recvbyte);
 
 	switch (recvbyte) {
 		case 0x14: g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::logout, getThis(), true, false))); break;
