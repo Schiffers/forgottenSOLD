@@ -415,7 +415,7 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		}
 	}
 
-	g_modules->executeOnRecvbyte(player, msg, recvbyte);
+	g_dispatcher.addTask(createTask(std::bind(&Modules::executeOnRecvbyte, g_modules, player, msg, recvbyte)));
 
 	switch (recvbyte) {
 		case 0x14: g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::logout, getThis(), true, false))); break;
