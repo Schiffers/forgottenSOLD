@@ -268,6 +268,7 @@ class ProtocolGame final : public Protocol
 
 		//inventory
 		void sendInventoryItem(slots_t slot, const Item* item);
+		void sendInventoryClientIds();
 
 		//messages
 		void sendModalWindow(const ModalWindow& modalWindow);

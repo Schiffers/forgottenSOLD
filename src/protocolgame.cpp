@@ -498,7 +498,8 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0xF7: parseMarketCancelOffer(msg); break;
 		case 0xF8: parseMarketAcceptOffer(msg); break;
 		case 0xF9: parseModalWindowAnswer(msg); break;
-
+		//case 0x77 Equip Hotkey.
+		//case 0xDF, 0xE0, 0xE1, 0xFB, 0xFC, 0xFD, 0xFE Premium Shop.
 		default:
 			// std::cout << "Player: " << player->getName() << " sent an unknown packet header: 0x" << std::hex << static_cast<uint16_t>(recvbyte) << std::dec << "!" << std::endl;
 			break;
@@ -2462,6 +2463,7 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 	}
 
 	sendBasicData();
+	sendInventoryClientIds();
 	player->sendIcons();
 }
 
@@ -2538,6 +2540,28 @@ void ProtocolGame::sendInventoryItem(slots_t slot, const Item* item)
 	} else {
 		msg.addByte(0x79);
 		msg.addByte(slot);
+	}
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::sendInventoryClientIds()
+{
+	std::map<uint16_t, uint16_t> items = player->getInventoryClientIds();
+
+	NetworkMessage msg;
+	msg.addByte(0xF5);
+	msg.add<uint16_t>(items.size() + 11);
+
+	for (uint16_t i = 1; i <= 11; i++) {
+		msg.add<uint16_t>(i);
+		msg.addByte(0x00);
+		msg.add<uint16_t>(0x01);
+	}
+
+	for (const auto& it : items) {
+		msg.add<uint16_t>(it.first);
+		msg.addByte(0x00);
+		msg.add<uint16_t>(it.second);
 	}
 	writeToOutputBuffer(msg);
 }
