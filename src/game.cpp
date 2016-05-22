@@ -2424,7 +2424,7 @@ void Game::playerRequestTrade(uint32_t playerId, const Position& pos, uint8_t st
 		return;
 	}
 
-	if (!canThrowObjectTo(tradePartner->getPosition(), player->getPosition()), true, 8, 6, tradePartner) {
+	if (!canThrowObjectTo(tradePartner->getPosition(), player->getPosition(), true, 8, 6, tradePartner)) {
 		player->sendCancelMessage(RETURNVALUE_CREATUREISNOTREACHABLE);
 		return;
 	}
@@ -2561,7 +2561,7 @@ void Game::playerAcceptTrade(uint32_t playerId)
 		return;
 	}
 
-	if (!canThrowObjectTo(tradePartner->getPosition(), player->getPosition()), true, 8, 6, tradePartner) {
+	if (!canThrowObjectTo(tradePartner->getPosition(), player->getPosition(), true, 8, 6, tradePartner)) {
 		player->sendCancelMessage(RETURNVALUE_CREATUREISNOTREACHABLE);
 		return;
 	}
