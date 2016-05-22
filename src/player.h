@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
+ * You should have received a copy of the GNU General Public LicegetPvpItemIdnse along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
@@ -1178,14 +1178,6 @@ class Player final : public Creature, public Cylinder
 
 		int64_t getLastWalkThroughAttempt() const {
 			return lastWalkthroughAttempt;
-		}
-
-		int16_t getPvpItemId(Item* item) {
-
-		}
-
-		void setPvpItemId(Item* item, int16_t itemId) {
-
 		}
 	protected:
 		std::forward_list<Condition*> getMuteConditions() const;
