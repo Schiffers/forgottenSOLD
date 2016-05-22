@@ -1266,3 +1266,18 @@ void NpcEventsHandler::onThink()
 	scriptInterface->pushFunction(thinkEvent);
 	scriptInterface->callFunction(0);
 }
+
+bool Npc::canWalkThroughTileItems(Tile* tile) const
+{
+	if (!g_game.isExpertPvpEnabled()) {
+		return true;
+	}
+
+	TileItemVector* itemList = tile->getItemList();
+	for (auto it : *itemList) {
+		if (it->getID() == ITEM_WILDGROWTH_NOPVP || it->getID() == ITEM_MAGICWALL_NOPVP) {
+			return false;
+		}
+	}
+	return true;
+}
