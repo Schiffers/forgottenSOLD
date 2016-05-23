@@ -100,7 +100,7 @@ function parseTransferCoins(player, msg)
 		return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "You can't transfer coins to yourself.")
 	end
 	
-	local resultId = db.storeQuery("SELECT `account_id` FROM `players` WHERE `name` = '" .. reciver:lower() .. "'")
+	local resultId = db.storeQuery("SELECT `account_id` FROM `players` WHERE `name` = " .. db.escapeString(reciver:lower()) .. "")
 	if not resultId then
 		return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "We couldn't find that player.")
 	end
@@ -112,13 +112,12 @@ function parseTransferCoins(player, msg)
 	
 	db.asyncQuery("UPDATE `accounts` SET `coins` = `coins` + " .. amount .. " WHERE `id` = " .. accountId)
 	player:removeCoinsBalance(amount)
-	sendStorePurchaseSuccessful(player, "You have transfered " .. amount .. " coins to " .. reciver .. " successfully")
+	addPlayerEvent(sendStorePurchaseSuccessful, 350, player, "You have transfered " .. amount .. " coins to " .. reciver .. " successfully")
 	
 	-- Adding history for both reciver/sender
 	GameStore.insertHistory(accountId, GameStore.HistoryTypes.HISTORY_TYPE_NONE, player:getName() .. " transfered you this amount.", amount)
 	GameStore.insertHistory(player:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, "You transfered this amount to " .. reciver, -1 * amount) -- negative
 	
-	-- ToDO update database with that amount.
 end
 function parseOpenStore(player, msg)
 	openStore(player)
@@ -285,11 +284,6 @@ function sendShowStoreOffers(player, category)
 			end
 			
 			name = name .. (offer.name or "Something Special")
-			--[[if (offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT and player:hasOutfit(offer.thingId))
-				or (offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT_ADDON and player:hasOutfit(offer.thingId, offer.addon))
-				or (offer.type == GameStore.OfferTypes.OFFER_TYPE_MOUNT and player:hasMount(offer.thingId)) then
-			name = name .. " (already have)"
-			end]]
 			
 			msg:addString(name)
 			msg:addString(offer.description)
@@ -318,7 +312,7 @@ function sendShowStoreOffers(player, category)
 			
 			msg:addByte(disabled)
 			
-			if disabled == 1 then
+			if disabled == 1 and player:getClient().version >= 1093 then
 				local disabledReason = ""
 				if offer.disableReason then
 					disabledReason = offer.disableReason
@@ -447,7 +441,7 @@ GameStore.getOfferById = function(id)
 	return nil
 end
 GameStore.insertHistory = function(accountId, mode, description, amount)
-	return db.asyncQuery(string.format("INSERT INTO `store_history`(`account_id`, `mode`, `description`, `coin_amount`, `time`) VALUES (%s, %s, '%s', %s, %s)", accountId, mode, description, amount, os.time()))
+	return db.asyncQuery(string.format("INSERT INTO `store_history`(`account_id`, `mode`, `description`, `coin_amount`, `time`) VALUES (%s, %s, %s, %s, %s)", accountId, mode, db.escapeString(description), amount, os.time()))
 end
 GameStore.retrieveHistoryEntries = function(accountId)
 	local entries = {}
