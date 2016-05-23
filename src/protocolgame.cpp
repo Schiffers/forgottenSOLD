@@ -455,14 +455,14 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0x8A: parseHouseWindow(msg); break;
 		case 0x8C: parseLookAt(msg); break;
 		case 0x8D: parseLookInBattleList(msg); break;
-		case 0x8E: /* join aggression */ break;
+		case 0x8E: /* join aggression to ->(lua_modules) */ break;
 		case 0x96: parseSay(msg); break;
 		case 0x97: addGameTask(&Game::playerRequestChannels, player->getID()); break;
 		case 0x98: parseOpenChannel(msg); break;
 		case 0x99: parseCloseChannel(msg); break;
 		case 0x9A: parseOpenPrivateChannel(msg); break;
 		case 0x9E: addGameTask(&Game::playerCloseNpcChannel, player->getID()); break;
-		case 0xA0: parseFightModes(msg); break;
+		case 0xA0: /* FightModes to ->(lua_modules)*/ break;
 		case 0xA1: parseAttack(msg); break;
 		case 0xA2: parseFollow(msg); break;
 		case 0xA3: parseInviteToParty(msg); break;
@@ -879,32 +879,6 @@ void ProtocolGame::parseSay(NetworkMessage& msg)
 	}
 
 	addGameTask(&Game::playerSay, player->getID(), channelId, type, receiver, text);
-}
-
-void ProtocolGame::parseFightModes(NetworkMessage& msg)
-{
-	uint8_t rawFightMode = msg.getByte(); // 1 - offensive, 2 - balanced, 3 - defensive
-	uint8_t rawChaseMode = msg.getByte(); // 0 - stand while fightning, 1 - chase opponent
-	uint8_t rawSecureMode = msg.getByte(); // 0 - can't attack unmarked, 1 - can attack unmarked
-	// uint8_t rawPvpMode = msg.getByte(); // pvp mode introduced in 10.0
-
-	chaseMode_t chaseMode;
-	if (rawChaseMode == 1) {
-		chaseMode = CHASEMODE_FOLLOW;
-	} else {
-		chaseMode = CHASEMODE_STANDSTILL;
-	}
-
-	fightMode_t fightMode;
-	if (rawFightMode == 1) {
-		fightMode = FIGHTMODE_ATTACK;
-	} else if (rawFightMode == 2) {
-		fightMode = FIGHTMODE_BALANCED;
-	} else {
-		fightMode = FIGHTMODE_DEFENSE;
-	}
-
-	addGameTask(&Game::playerSetFightModes, player->getID(), fightMode, chaseMode, rawSecureMode != 0);
 }
 
 void ProtocolGame::parseAttack(NetworkMessage& msg)
@@ -2338,17 +2312,6 @@ void ProtocolGame::sendEnterWorld()
 	writeToOutputBuffer(msg);
 }
 
-void ProtocolGame::sendFightModes()
-{
-	NetworkMessage msg;
-	msg.addByte(0xA7);
-	msg.addByte(player->fightMode);
-	msg.addByte(player->chaseMode);
-	msg.addByte(player->secureMode);
-	msg.addByte(PVP_MODE_DOVE);
-	writeToOutputBuffer(msg);
-}
-
 void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos, int32_t stackpos, bool isLogin)
 {
 	if (!canSee(pos)) {
@@ -2392,8 +2355,8 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 		msg.addByte(0x00);
 	}
 
-	msg.addByte(0x00); // can change pvp framing option
-	msg.addByte(0x00); // expert mode button enabled
+	msg.addByte(g_game.isExpertPvpEnabled()); // can change pvp framing option
+	msg.addByte(g_game.isExpertPvpEnabled()); // expert mode button enabled
 
 	if (version >= 1080) {
 		msg.addString(g_config.getString(ConfigManager::STORE_IMAGES_URL));
@@ -2465,6 +2428,10 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 	sendBasicData();
 	sendInventoryClientIds();
 	player->sendIcons();
+
+	if (g_game.isExpertPvpEnabled()) {
+		g_game.updateSpectatorsPvp(player, 520);
+	}
 }
 
 void ProtocolGame::sendMoveCreature(const Creature* creature, const Position& newPos, int32_t newStackPos, const Position& oldPos, int32_t oldStackPos, bool teleport)
