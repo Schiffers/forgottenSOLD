@@ -65,6 +65,16 @@ GameStore.RecivedPackets				= {
 GameStore.DefaultValues					= {
 	DEFAULT_VALUE_ENTRIES_PER_PAGE	= 16
 }
+GameStore.DefaultDescriptions = {
+	OUTFIT = {"This outfit looks nice. Only high-class people are able to wear it!",
+			"An outfit that was created to suit you. We are sure you'll like it.",
+			"Legend says only smart people should wear it, otherwise you will burn!"},
+	MOUNT = {"This is a fantastic mount that helps to become faster, try it!",
+			"The first rider of this mount became the leader of his country! legends say that."},
+	NAMECHANGE = {"Are you hunted? Tired of that? Get a new name, a new life!",
+			"A new name to suit your needs!"},
+	SEXCHANGE = {"Bored of your character's sex? Get a new sex for him now!!"}
+}
 --==Parsing==--
 GameStore.isItsPacket = function(byte)
 	for k, v in pairs(GameStore.RecivedPackets) do
@@ -97,17 +107,17 @@ function parseTransferCoins(player, msg)
 	local amount = msg:getU32()
 	
 	if reciver:lower() == player:getName():lower() then
-		return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "You can't transfer coins to yourself.")
+		return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "You can't transfer coins to yourself.")
 	end
 	
 	local resultId = db.storeQuery("SELECT `account_id` FROM `players` WHERE `name` = " .. db.escapeString(reciver:lower()) .. "")
 	if not resultId then
-		return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "We couldn't find that player.")
+		return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "We couldn't find that player.")
 	end
 	
 	local accountId = result.getDataInt(resultId, "account_id")
 	if accountId == player:getAccountId() then
-		return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "You cannot transfer coin to a character in the same account.")
+		return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_TRANSFER, "You cannot transfer coin to a character in the same account.")
 	end
 	
 	db.asyncQuery("UPDATE `accounts` SET `coins` = `coins` + " .. amount .. " WHERE `id` = " .. accountId)
@@ -123,21 +133,16 @@ function parseOpenStore(player, msg)
 	openStore(player)
 	
 	local serviceType = msg:getByte()
+	local category = GameStore.Categories and GameStore.Categories[1] or nil
+	
 	if serviceType == GameStore.ServiceTypes.SERVICE_OUTFITS then
-		local category = GameStore.getCategoryByName("outfits")
-		if category then
-			sendShowStoreOffers(player, category)
-		end
+		category = GameStore.getCategoryByName("outfits")
 	elseif serviceType == GameStore.ServiceTypes.SERVICE_MOUNTS then
-		local category = GameStore.getCategoryByName("mounts")
-		if category then
-			sendShowStoreOffers(player, category)
-		end
-	else
-		local category = GameStore.Categories and GameStore.Categories[1] or nil
-		if category then
-			sendShowStoreOffers(player, category)
-		end
+		category = GameStore.getCategoryByName("mounts")
+	end
+	
+	if category then
+		addPlayerEvent(sendShowStoreOffers, 350, player, category)
 	end
 end
 function parseRequestStoreOffers(player, msg)
@@ -149,7 +154,7 @@ function parseRequestStoreOffers(player, msg)
 	
 	local category = GameStore.getCategoryByName(categoryName)
 	if category then
-		sendShowStoreOffers(player, category)
+		addPlayerEvent(sendShowStoreOffers, 350, player, category)
 	end
 end
 function parseBuyStoreOffer(player, msg)
@@ -161,17 +166,17 @@ function parseBuyStoreOffer(player, msg)
 	
 		-- If we don't add type, or offer type is fake
 		if not offer.type or offer.type == GameStore.OfferTypes.OFFER_TYPE_NONE then
-			return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "The offer is either fake or corrupt.")
+			return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "The offer is either fake or corrupt.")
 		end
 		
 		-- If no thing id,
 		if offer.type ~= GameStore.OfferTypes.OFFER_TYPE_NAMECHANGE and offer.type ~= GameStore.OfferTypes.OFFER_TYPE_SEXCHANGE and not offer.thingId then
-			return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "The offer is either fake or corrupt.")
+			return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "The offer is either fake or corrupt.")
 		end
 		
 		-- We remove coins before doing everything, if it fails, we add coins back!
 		if not player:removeCoinsBalance(offer.price) then
-			return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "We couldn't remove coins from your account, try again later.")
+			return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "We couldn't remove coins from your account, try again later.")
 		end
 		
 		-- count is used in type(item), so we need to show (i.e 10x crystal coins)
@@ -183,15 +188,26 @@ function parseBuyStoreOffer(player, msg)
 		if offer.type == GameStore.OfferTypes.OFFER_TYPE_ITEM then
 			local backpack = player:getSlotItem(CONST_SLOT_BACKPACK)
 			if backpack and backpack:getEmptySlots() > 0 then
-				player:addItemEx(Game.createItem(offer.thingId, offer.count or 1))
+				player:addItem(offer.thingId, offer.count or 1)
 			else
 				-- ToDo: send items to player's inbox.
 				player:addCoinsBalance(offer.price)
-				return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "Please make sure you have free slots in main backpack.")
+				return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "Please make sure you have free slots in main backpack.")
 			end
 		-- If offer is outfit/addon
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT or offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT_ADDON then
-			player:addOutfitAddon(offer.thingId, offer.addon or 0)
+			local outfitLookType
+			if player:getSex() == PLAYERSEX_MALE then
+				outfitLookType = offer.thingId.male
+			else
+				outfitLookType = offer.thingId.female
+			end
+			if not outfitLookType then
+				player:addCoinsBalance(offer.price)
+				return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This outfit seems not to suit your sex, we are sorry for that!")
+			end
+			
+			player:addOutfitAddon(outfitLookType, offer.addon or 0)
 		-- If offer is mount
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_MOUNT then
 			player:addMount(offer.thingId)
@@ -201,31 +217,39 @@ function parseBuyStoreOffer(player, msg)
 			if productType == GameStore.ClientOfferTypes.CLIENT_STORE_OFFER_NAMECHANGE then
 				local newName = msg:getString()
 				
-				local resultId = db.storeQuery("SELECT * FROM `players` WHERE `name` = '" .. newName .. "'")
+				local resultId = db.storeQuery("SELECT * FROM `players` WHERE `name` = " .. db.escapeString(newName) .. "")
 				if resultId ~= false then
 					player:addCoinsBalance(offer.price, true)
-					return sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This name is already used, please try again!")
+					return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This name is already used, please try again!")
 				end
 				
-				db.asyncQuery("UPDATE `players` SET `name` = '" .. newName .. "' WHERE `id` = " .. player:getGuid())
-				return sendStorePurchaseSuccessful(player, "You have successfully changed you name, you must relog to see changes.")
+				db.asyncQuery("UPDATE `players` SET `name` = " .. db.escapeString(newName) .. " WHERE `id` = " .. player:getGuid())
+				return addPlayerEvent(sendStorePurchaseSuccessful, 350, player, "You have successfully changed you name, you must relog to see changes.")
 			-- If not, we ask him to do!
 			else
 				player:addCoinsBalance(offer.price)
-				return sendRequestPurchaseData(player, offer.id, GameStore.ClientOfferTypes.CLIENT_STORE_OFFER_NAMECHANGE)
+				return addPlayerEvent(sendRequestPurchaseData, 100, player, offer.id, GameStore.ClientOfferTypes.CLIENT_STORE_OFFER_NAMECHANGE)
 			end
 		-- If offer is sex change
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_SEXCHANGE then
 			player:toggleSex()
+		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_PROMOTION then
+			if not GameStore.addPromotionToPlayer(player, offer.thingId) then
+				player:addCoinsBalance(offer.price, true)
+				return false
+			end
+		else
+			player:addCoinsBalance(offer.price, true)
+			return addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This offer is fake, please contact admin.")
 		end
 		-- We add this purchase to history!
 		GameStore.insertHistory(player:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, offerCountStr .. offer.name, offer.price * -1)
 		-- Send to client that purchase is successful!
-		return sendStorePurchaseSuccessful(player, message)
+		return addPlayerEvent(sendStorePurchaseSuccessful, 350, player, message)
 	end
 	
 	-- If we didn't found the offer or error happened
-	sendStoreError(player, GameStore.StoreErrors.STORE_ERROR_INFORMATION, "We couldn't locate this offer, please try again later.")
+	addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_INFORMATION, "We couldn't locate this offer, please try again later.")
 end
 -- Both functions use same formula!
 function parseOpenTransactionHistory(player, msg)
@@ -286,26 +310,63 @@ function sendShowStoreOffers(player, category)
 			name = name .. (offer.name or "Something Special")
 			
 			msg:addString(name)
-			msg:addString(offer.description)
+			msg:addString(offer.description or GameStore.getDefaultDescription(offer.type))
 			
 			
 			msg:addU32(offer.price and offer.price or 0xFFFF)
 			msg:addByte(offer.state or GameStore.States.STATE_NONE) -- default is none
 			
-			local disabled
-			if offer.disabled == true then disabled = 1 end
+			local disabled, disabledReason = 0, ""
+			if offer.disabled == true or not offer.type then
+				disabled = 1
+			end
+			
+			if offer.type ~= GameStore.OfferTypes.OFFER_TYPE_NAMECHANGE and offer.type ~= GameStore.OfferTypes.OFFER_TYPE_SEXCHANGE and not offer.thingId then
+				disabled = 1
+			end
+			
+			if disabled == 1 and offer.disabledReason then -- dynamic disable
+				disabledReason = offer.disabledReason
+			end
 			
 			if disabled ~= 1 then
-				disabled = 0
 				if offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT or offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT_ADDON then
-					local addon = player:hasOutfit(offer.thingId, offer.addon and offer.addon or 0)
-					if addon == nil or addon == true then
+					local outfitLookType
+					if player:getSex() == PLAYERSEX_MALE then
+						outfitLookType = offer.thingId.male
+					else
+						outfitLookType = offer.thingId.female
+					end
+					
+					if outfitLookType then
+						if offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT and player:hasOutfit(outfitLookType) then
+							disabled = 1
+							disabledReason = "You already have this outfit."
+						elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT_ADDON then
+							if player:hasOutfit(outfitLookType) then
+								if player:hasOutfit(outfitLookType, offer.addon) then
+									disabled = 1
+									disabledReason = "You already have this addon."
+								end
+							else
+								disabled = 1
+								disabledReason = "You don't have the outfit, you can't buy the addon."
+							end
+						end
+					else
 						disabled = 1
+						disabledReason = "The offer is fake."
 					end
 				elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_MOUNT then
 					local hasMount = player:hasMount(offer.thingId)
 					if hasMount == true then
 						disabled = 1
+						disabledReason = "You already have this mount."
+					end
+				elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_PROMOTION then
+					if GameStore.canAddPromotionToPlayer(player, offer.thingId).ability == false then
+						disabled = 1
+						disabledReason = "You can't get this promotion"
 					end
 				end
 			end
@@ -313,22 +374,6 @@ function sendShowStoreOffers(player, category)
 			msg:addByte(disabled)
 			
 			if disabled == 1 and player:getClient().version >= 1093 then
-				local disabledReason = ""
-				if offer.disableReason then
-					disabledReason = offer.disableReason
-				else
-					if offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT or offer.type == GameStore.OfferTypes.OFFER_TYPE_OUTFIT_ADDON then
-						local addon = player:hasOutfit(offer.thingId, offer.addon and offer.addon or 0)
-						if addon == true then
-							disabledReason = "You already have this outfit/addon."
-						end
-					elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_MOUNT then
-						local hasMount = player:hasMount(offer.thingId)
-						if hasMount == true then
-							disabledReason = "You already have this mount."
-						end
-					end
-				end
 				msg:addString(disabledReason)
 			end
 			
@@ -460,6 +505,88 @@ GameStore.retrieveHistoryEntries = function(accountId)
 	end
 	return entries
 end
+GameStore.getDefaultDescription = function(offerType)
+	local t, descList = GameStore.OfferTypes
+	if offerType == t.OFFER_TYPE_OUTFIT or offerType == t.OFFER_TYPE_OUTFIT_ADDON then
+		descList = GameStore.DefaultDescriptions.OUTFIT
+	elseif offerType == t.OFFER_TYPE_MOUNT then
+		descList = GameStore.DefaultDescriptions.MOUNT
+	elseif offerType == t.OFFER_TYPE_NAMECHANGE then
+		descList = GameStore.DefaultDescriptions.NAMECHANGE
+	elseif offerType == t.OFFER_TYPE_SEXCHANGE then
+		descList = GameStore.DefaultDescriptions.SEXCHANGE
+	else
+		return ""
+	end
+	
+	return descList[math.floor(math.random(1, #descList))] or ""
+end
+GameStore.canAddPromotionToPlayer = function(player, promotion, send)
+	local result = {
+		ability = true
+	}
+	local vocation = player:getVocation()
+	-- Working --
+	local vocationCopy, baseVocation = vocation, vocation
+	vocation = vocation:getDemotion()
+	while vocation do
+		baseVocation = vocation
+		vocation = vocation:getDemotion()
+	end
+	
+	local baseVocationsCount = GameStore.BaseVocationsCount or 4
+	
+	local newVocId = (baseVocationsCount * promotion) + baseVocation:getId()
+	
+	if not Vocation(newVocId) then
+		if send then
+			addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "The offer is fake, please report it!")
+		end
+		result.ability = false
+		return result
+	end
+	-- If promotion is less than player's voc, or player don't have previous promotion
+	if newVocId <= vocationCopy:getId() then
+		if send then
+			addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "You already have this promotion!")
+		end
+		result.ability = false
+		return result
+	end
+	
+	if (newVocId - baseVocationsCount) ~= vocationCopy:getId() then
+		if send then
+			addPlayerEvent(sendStoreError, 350, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "You need higher promotion to get his one.")
+		end
+		result.ability = false
+		return result
+	end
+	
+	result.vocId = newVocId
+	return result
+end
+GameStore.addPromotionToPlayer = function(player, promotion)
+	local result = GameStore.canAddPromotionToPlayer(player, promotion, true)
+	if result.ability == false then return false end
+	
+	local basics = {
+		health = 185,
+		mana = 40,
+		cap = 500
+	}
+	
+	player:setVocation(result.vocId)
+	local newVoc = player:getVocation()
+	player:setMaxHealth(basics.health + (newVoc:getHealthGain() * player:getLevel()))
+	player:setMaxMana(basics.mana + (newVoc:getManaGain() * player:getLevel()))
+	player:setCapacity(basics.cap + (newVoc:getCapacityGain() * player:getLevel()))
+	
+	player:addHealth(player:getMaxHealth())
+	player:addMana(player:getMaxMana())
+	
+	player:sendTextMessage(MESSAGE_INFO_DESCR, "You have been promoted to " .. newVoc:getName())
+	return true
+end
 --==Player==--
 function Player.getCoinsBalance(self)
 	resultId = db.storeQuery("SELECT `coins` FROM `accounts` WHERE `id` = " .. self:getAccountId())
@@ -483,9 +610,14 @@ function Player.addCoinsBalance(self, coins, update)
 end
 function Player.toggleSex(self)
 	local currentSex = self:getSex()
+	local playerOutfit = self:getOutfit()
+	
 	if currentSex == PLAYERSEX_FEMALE then
 		self:setSex(PLAYERSEX_MALE)
+		playerOutfit.lookType = 128
 	else
 		self:setSex(PLAYERSEX_FEMALE)
+		playerOutfit.lookType = 136
 	end
+	self:setOutfit(playerOutfit)
 end
