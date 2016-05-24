@@ -642,10 +642,6 @@ void Combat::combatTileEffects(const SpectatorVec& list, Creature* caster, Tile*
 					field->pvpMode = casterPlayer->getPvpMode(); // storeing pvp mode player casted the fire in;
 					field->isCasterPlayer = true;
 				}
-
-				if (g_game.isExpertPvpEnabled() && g_game.getWorldType() != WORLD_TYPE_NO_PVP) {
-					g_game.updateSpectatorsPvp(item, 520);
-				}
 			}
 		} else {
 			delete item;
@@ -778,9 +774,10 @@ bool Combat::doCombat(Creature* caster, Creature* target) const
 {
 	if (Tile* tile = g_game.map.getTile(target->getPosition())) {
 		for (auto it : *tile->getItemList()) {
-			if (!it->getID() == ITEM_MAGICWALL_NOPVP && !it->getID() == ITEM_WILDGROWTH_NOPVP) {
+			if (it->getID()  != ITEM_MAGICWALL_NOPVP && it->getID() != ITEM_WILDGROWTH_NOPVP) {
 				continue;
 			}
+
 			Player* owner = g_game.getPlayerByID(it->getOwner());
 			if (!owner) {
 				continue;
@@ -817,9 +814,10 @@ bool Combat::doCombat(Creature* caster, const Position& position) const
 {
 	if (Tile* tile = g_game.map.getTile(position)) {
 		for (auto it : *tile->getItemList()) {
-			if (!it->getID() == ITEM_MAGICWALL_NOPVP && !it->getID() == ITEM_WILDGROWTH_NOPVP) {
+			if (it->getID() != ITEM_MAGICWALL_NOPVP && it->getID() != ITEM_WILDGROWTH_NOPVP) {
 				continue;
 			}
+
 			Player* owner = g_game.getPlayerByID(it->getOwner());
 			if (!owner) {
 				continue;

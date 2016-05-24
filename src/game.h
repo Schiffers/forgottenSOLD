@@ -499,7 +499,7 @@ class Game
 		void removeUniqueItem(uint16_t uniqueId);
 
 		bool isExpertPvpEnabled();
-		void updateSpectatorsPvp(Thing* thing, uint32_t delay);
+		void updateSpectatorsPvp(Thing* thing);
 
 		Groups groups;
 		Map map;

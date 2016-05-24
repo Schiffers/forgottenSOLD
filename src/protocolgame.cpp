@@ -2428,10 +2428,6 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 	sendBasicData();
 	sendInventoryClientIds();
 	player->sendIcons();
-
-	if (g_game.isExpertPvpEnabled()) {
-		g_game.updateSpectatorsPvp(player, 520);
-	}
 }
 
 void ProtocolGame::sendMoveCreature(const Creature* creature, const Position& newPos, int32_t newStackPos, const Position& oldPos, int32_t oldStackPos, bool teleport)

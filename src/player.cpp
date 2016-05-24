@@ -1605,6 +1605,10 @@ void Player::onThink(uint32_t interval)
 	if (lastStatsTrainingTime != getOfflineTrainingTime() / 60 / 1000) {
 		sendStats();
 	}
+
+	if (g_game.isExpertPvpEnabled()) {
+		g_game.updateSpectatorsPvp(const_cast<Player*>(this));
+	}
 }
 
 uint32_t Player::isMuted() const
@@ -4772,7 +4776,7 @@ bool Player::canAttack(Creature* creature) const
 			return true; // a non-secure mode or red-fist mode can attack anyone
 		}
 
-		// Player is trying to attack someone with Dove Mode, while they didn't attack each other with fist|non-secure modes before.
+		// Player is trying to attack someone with dove mode, while they didn't attack each other with fist|non-secure modes before.
 		if (pvpMode == PVP_MODE_DOVE && !hasPvpActivity(player)) {
 			return false;
 		}
@@ -4782,7 +4786,7 @@ bool Player::canAttack(Creature* creature) const
 			return false;
 		}
 
-		// You can only attacked skulled with this mode as well attack who attacked you before!
+		// You can only attack both skulled and who attacked you before!
 		if (pvpMode == PVP_MODE_YELLOW_HAND && !hasPvpActivity(player) && player->getSkull() == SKULL_NONE) {
 			return false;
 		}
