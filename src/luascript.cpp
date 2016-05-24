@@ -2162,7 +2162,6 @@ void LuaScriptInterface::registerFunctions()
 
 	registerMethod("Player", "getItemCount", LuaScriptInterface::luaPlayerGetItemCount);
 	registerMethod("Player", "getItemById", LuaScriptInterface::luaPlayerGetItemById);
-	registerMethod("Player", "getItemByClietnId", LuaScriptInterface::luaPlayerGetItemByClientId);
 
 	registerMethod("Player", "getVocation", LuaScriptInterface::luaPlayerGetVocation);
 	registerMethod("Player", "setVocation", LuaScriptInterface::luaPlayerSetVocation);
@@ -8044,32 +8043,6 @@ int LuaScriptInterface::luaPlayerGetItemById(lua_State* L)
 	} else {
 		lua_pushnil(L);
 	}
-	return 1;
-}
-
-int LuaScriptInterface::luaPlayerGetItemByClientId(lua_State* L)
-{
-	// player:getItemByClientId(itemId[, subType = -1])
-	Player* player = getUserdata<Player>(L, 1);
-	if (!player) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	uint16_t itemId = getNumber<uint16_t>(L, 2);
-	if (!itemId) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	Item* item = player->getItemByClientId(itemId);
-	if (!item) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	pushUserdata<Item>(L, item);
-	setItemMetatable(L, -1, item);
 	return 1;
 }
 

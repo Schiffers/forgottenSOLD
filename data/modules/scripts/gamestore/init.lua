@@ -3,7 +3,7 @@ GameStore = {
 	ModuleName = "GameStore",
 	Developer = "Slavi Dodo",
 	Version = "0.3",
-	LastUpdated = "[CEST] 15-05-2016 01:42AM"
+	LastUpdated = "[CEST] 24-05-2016 ~~"
 }
 --== Enums ==--
 GameStore.OfferTypes						= {
