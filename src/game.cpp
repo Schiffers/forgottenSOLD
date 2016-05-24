@@ -4703,11 +4703,24 @@ void Game::playerInviteToParty(uint32_t playerId, uint32_t invitedId)
 		return;
 	}
 
+	std::ostringstream ss;
 	if (invitedPlayer->getParty()) {
-		std::ostringstream ss;
 		ss << invitedPlayer->getName() << " is already in a party.";
 		player->sendTextMessage(MESSAGE_INFO_DESCR, ss.str());
 		return;
+	}
+
+	if (g_game.isExpertPvpEnabled()) {
+		if (invitedPlayer->isInPvpSituation()) {
+			ss << "You can't invite " << invitedPlayer->getName() << " while he is in an agression.";
+			player->sendCancelMessage(ss.str());
+			return;
+		} else if (player->isInPvpSituation()) {
+			ss << "You can't invite players while you are in an agression.";
+			player->sendCancelMessage(ss.str());
+			return;
+		}
+		
 	}
 
 	Party* party = player->getParty();
@@ -4739,6 +4752,11 @@ void Game::playerJoinParty(uint32_t playerId, uint32_t leaderId)
 
 	if (player->getParty()) {
 		player->sendTextMessage(MESSAGE_INFO_DESCR, "You are already in a party.");
+		return;
+	}
+
+	if (g_game.isExpertPvpEnabled() && (player->isInPvpSituation() || leader->isInPvpSituation())) {
+		player->sendCancelMessage("You can't join while you are in an aggression");
 		return;
 	}
 
