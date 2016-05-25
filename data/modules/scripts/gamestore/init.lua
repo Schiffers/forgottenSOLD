@@ -220,10 +220,12 @@ function parseBuyStoreOffer(player, msg)
 					return addPlayerEvent(sendStoreError, 650, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This name is already used, please try again!")
 				end
 				
-				if not GameStore.canChangeToName(newName) then
-					return addPlayerEvent(sendStoreError, 650, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, "This name can't be used, please add another one.")
+				local result = GameStore.canChangeToName(newName)
+				if not result.ability then
+					return addPlayerEvent(sendStoreError, 650, player, GameStore.StoreErrors.STORE_ERROR_NETWORK, result.reason)
 				end
 				
+				newName = newName:lower():gsub("(%l)(%w*)", function(a, b) return string.upper(a) .. b end)
 				db.asyncQuery("UPDATE `players` SET `name` = " .. db.escapeString(newName) .. " WHERE `id` = " .. player:getGuid())
 				message =  "You have successfully changed you name, you must relog to see changes."
 			-- If not, we ask him to do!
@@ -525,20 +527,44 @@ GameStore.getDefaultDescription = function(offerType)
 	return descList[math.floor(math.random(1, #descList))] or ""
 end
 GameStore.canChangeToName = function(name)
+	local result = {
+		ability = false
+	}
 	if name:len() < 3 or name:len() > 14 then
-		return false
+		result.reason = "Your new name's length should be lower than 3 or higher than 14."
+		return result
 	end
+	
+	-- just copied from znote aac.
+	local words = {"owner", "gamemaster", "hoster", "admin", "staff", "tibia", "account", "god", "anal", "ass", "fuck", "sex", "hitler", "pussy", "dick", "rape", "cm", "gm"}
+	for k, word in ipairs(words) do
+		if name:lower():match(word) then
+			result.reason = "You can't use \"" .. word .. "\" in your new name."
+			return result
+		end
+	end
+	
+	if MonsterType(name) then
+		result.reason = "Your new name \"" .. name .. "\" can't be a monster's name."
+		return result
+	elseif Npc(name) then
+		result.reason = "Your new name \"" .. name .. "\" can't be a npc's name."
+		return result
+	end
+	
 	local letters = "{}|_*+-=<>0123456789@#%^&()/*\\.,:;~!\"$"
 	for i = 1, letters:len() do
 		local c = letters:sub(i, i)
 		for i = 1, name:len() do
 			local m = name:sub(i, i)
 			if m == c then
-				return false
+				result.reason = "You can't use this letter \"" .. c .. "\" in your new name."
+				return result
 			end
 		end
 	end
-	return true
+	result.ability = true
+	return result
 end
 GameStore.canAddPromotionToPlayer = function(player, promotion, send)
 	local result = {
