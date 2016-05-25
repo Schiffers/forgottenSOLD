@@ -537,10 +537,13 @@ GameStore.canChangeToName = function(name)
 	
 	-- just copied from znote aac.
 	local words = {"owner", "gamemaster", "hoster", "admin", "staff", "tibia", "account", "god", "anal", "ass", "fuck", "sex", "hitler", "pussy", "dick", "rape", "cm", "gm"}
+	local split = name:split(" ")
 	for k, word in ipairs(words) do
-		if name:lower():match(word) then
-			result.reason = "You can't use \"" .. word .. "\" in your new name."
-			return result
+		for k, nameWord in ipairs(split) do
+			if nameWord:lower() == word then
+				result.reason = "You can't use word \"" .. word .. "\" in your new name."
+				return result
+			end
 		end
 	end
 	
