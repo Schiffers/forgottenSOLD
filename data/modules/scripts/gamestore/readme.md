@@ -2,13 +2,13 @@
 ---
 
 ### Information
-- #### Developer : @slavidodo
-- #### Version : 0.3
-- #### last Updated : [CEST] 25-05-2016 07:00AM
+###### - Developer : @slavidodo
+###### - Version : 0.3
+###### - last Updated : [CEST] 25-05-2016 07:00AM
 
 ### Faq
 
-1. #### How to make a category?
+##### 1. How to make a category?
 ```lua
 --- Method 1 ---
 GameStore.Categories = {
@@ -34,7 +34,7 @@ GameStore.Categories = {
 }
 ```
 
-2. #### How to add offers to category
+##### 2. How to add offers to category
 ```lua
 --- Method 1 ---
 GameStore.Categories = {
