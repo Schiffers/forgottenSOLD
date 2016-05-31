@@ -109,9 +109,10 @@ mounts.offers = {
 		]]
 	}
 }
+```
 
 ### Offer types and States.
-```
+
 | OfferTypes              | States      |
 |-------------------------|-------------|
 | `OFFER_TYPE_ITEM`         | `STATE_NEW`   |

@@ -1481,13 +1481,16 @@ void MagicField::onStepInField(Creature* creature)
 
 			Player* targetPlayer = creature->getPlayer();
 			if (targetPlayer) {
-				Player* attackerPlayer = owner->getPlayer();
+				Player* attackerPlayer = nullptr;
 				bool isSummonField = false;
-				if (!attackerPlayer) {
-					if (Monster* monster = g_game.getMonsterByID(ownerId)) {
-						if (monster->isSummon() && monster->getMaster()->getPlayer()) {
-							isSummonField = true;
-							attackerPlayer = monster->getMaster()->getPlayer();
+				if (owner) {
+					attackerPlayer = owner->getPlayer();
+					if (!attackerPlayer) {
+						if (Monster* monster = g_game.getMonsterByID(ownerId)) {
+							if (monster->isSummon() && monster->getMaster()->getPlayer()) {
+								isSummonField = true;
+								attackerPlayer = monster->getMaster()->getPlayer();
+							}
 						}
 					}
 				}
@@ -1498,18 +1501,15 @@ void MagicField::onStepInField(Creature* creature)
 					}
 
 					// in expert pvp, we don't care about mosnter, we can't about it's owner!
-					if (g_game.isExpertPvpEnabled() && targetPlayer != attackerPlayer) {
-						// if player casted while he is red fist, we stored that!
+					if (g_game.isExpertPvpEnabled() && targetPlayer != attackerPlayer && !targetPlayer->hasFlag(PlayerFlag_CannotBeAttacked)) {
+						// if mode is not red but they aren't enganged in pvp
 						if (pvpMode != PVP_MODE_RED_FIST && !attackerPlayer->hasPvpActivity(targetPlayer)) {
 							return;
-						}
-						else if (pvpMode == PVP_MODE_RED_FIST) {
-							if (!attackerPlayer->hasPvpActivity(targetPlayer)) {
-								attackerPlayer->addAttacked(targetPlayer);
-								attackerPlayer->addInFightTicks(true);
-								if (attackerPlayer->getSkull() == SKULL_NONE) {
-									attackerPlayer->setSkull(SKULL_WHITE);
-								}
+						} else if (pvpMode == PVP_MODE_RED_FIST) {
+							attackerPlayer->addAttacked(targetPlayer);
+							attackerPlayer->addInFightTicks(true);
+							if (attackerPlayer->getSkull() == SKULL_NONE && targetPlayer->getSkull() == SKULL_NONE) {
+								attackerPlayer->setSkull(SKULL_WHITE);
 							}
 						}
 

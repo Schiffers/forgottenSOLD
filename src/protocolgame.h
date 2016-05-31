@@ -241,7 +241,7 @@ class ProtocolGame final : public Protocol
 		void sendCreatureLight(const Creature* creature);
 		void sendWorldLight(const LightInfo& lightInfo);
 
-		void sendCreatureSquare(const Creature* creature, SquareColor_t color);
+		void sendCreatureSquare(const Creature* creature, SquareColor_t color, uint8_t length);
 
 		void sendSpellCooldown(uint8_t spellId, uint32_t time);
 		void sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time);
