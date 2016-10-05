@@ -225,7 +225,8 @@ void Spawn::startup()
 	for (const auto& it : spawnMap) {
 		uint32_t spawnId = it.first;
 		const spawnBlock_t& sb = it.second;
-		spawnMonster(spawnId, sb.mType, sb.pos, sb.direction, true);
+		const spawnBlock_t& randSb = std::next(spawnMap.begin(), uniform_random(0, spawnMap.size() - 1))->second;
+		spawnMonster(spawnId, randSb.mType, sb.pos, sb.direction, true);
 	}
 }
 
@@ -249,8 +250,8 @@ void Spawn::checkSpawn()
 				sb.lastSpawn = OTSYS_TIME();
 				continue;
 			}
-
-			spawnMonster(spawnId, sb.mType, sb.pos, sb.direction);
+			const spawnBlock_t& randSb = std::next(spawnMap.begin(), uniform_random(0, spawnMap.size() - 1))->second;
+			spawnMonster(spawnId, randSb.mType, sb.pos, sb.direction, true);
 			if (++spawnCount >= static_cast<uint32_t>(g_config.getNumber(ConfigManager::RATE_SPAWN))) {
 				break;
 			}
