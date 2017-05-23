@@ -1,6 +1,6 @@
 /**
  * The Forgotten Server - a free and open-source MMORPG server emulator
- * Copyright (C) 2016  Mark Samman <mark.samman@gmail.com>
+ * Copyright (C) 2015  Mark Samman <mark.samman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ enum BugReportType_t : uint8_t {
 	BUG_CATEGORY_OTHER = 3
 };
 
-enum ThreadState {
+enum ThreadState : uint64_t {
 	THREAD_STATE_RUNNING,
 	THREAD_STATE_CLOSING,
 	THREAD_STATE_TERMINATED,
@@ -102,8 +102,6 @@ enum CreatureType_t : uint8_t {
 };
 
 enum OperatingSystem_t : uint8_t {
-	CLIENTOS_NONE = 0,
-
 	CLIENTOS_LINUX = 1,
 	CLIENTOS_WINDOWS = 2,
 	CLIENTOS_FLASH = 3,
@@ -121,6 +119,26 @@ enum SpellGroup_t : uint8_t {
 	SPELLGROUP_SPECIAL = 4,
 };
 
+enum StoreOfferState_t : uint8_t {
+ 	STORE_OFFERSTATE_NONE = 0,
+ 	STORE_OFFERSTATE_NEW = 1,
+ 	STORE_OFFERSTATE_SALE = 2,
+ 	STORE_OFFERSTATE_TIMED = 3,
+ };
+ 
+ enum StoreOfferType_t : uint8_t {
+ 	STORE_OFFERTYPE_OTHER = 0,
+ 	STORE_OFFERTYPE_NAMECHANGE = 1,
+ };
+ 
+ enum StoreError_t : uint8_t {
+ 	STORE_ERROR_PURCHASE = 0,
+ 	STORE_ERROR_NETWORK = 1,
+ 	STORE_ERROR_HISTORY = 2,
+ 	STORE_ERROR_TRANSFER = 3,
+ 	STORE_ERROR_INFORMATION = 4,
+ };
+ 
 enum AccountType_t : uint8_t {
 	ACCOUNT_TYPE_NORMAL = 1,
 	ACCOUNT_TYPE_TUTOR = 2,
@@ -139,7 +157,7 @@ enum RaceType_t : uint8_t {
 };
 
 enum CombatType_t {
-	COMBAT_NONE = 0,
+	COMBAT_NONE,
 
 	COMBAT_PHYSICALDAMAGE = 1 << 0,
 	COMBAT_ENERGYDAMAGE = 1 << 1,
@@ -153,8 +171,9 @@ enum CombatType_t {
 	COMBAT_ICEDAMAGE = 1 << 9,
 	COMBAT_HOLYDAMAGE = 1 << 10,
 	COMBAT_DEATHDAMAGE = 1 << 11,
+	COMBAT_CRITICALDAMAGE = 1 << 12,
 
-	COMBAT_COUNT = 12
+	COMBAT_COUNT = 13
 };
 
 enum CombatParam_t {
@@ -224,7 +243,20 @@ enum ConditionParam_t {
 	CONDITION_PARAM_BUFF_SPELL = 44,
 	CONDITION_PARAM_SUBID = 45,
 	CONDITION_PARAM_FIELD = 46,
+	CONDITION_PARAM_SKILL_CRITICAL_HIT_CHANCE = 47,
+ 	CONDITION_PARAM_SKILL_CRITICAL_HIT_DAMAGE = 48,
+ 	CONDITION_PARAM_SKILL_LIFE_LEECH_CHANCE = 49,
+ 	CONDITION_PARAM_SKILL_LIFE_LEECH_AMOUNT = 50,
+ 	CONDITION_PARAM_SKILL_MANA_LEECH_CHANCE = 51,
+ 	CONDITION_PARAM_SKILL_MANA_LEECH_AMOUNT = 52,
+ 	CONDITION_PARAM_SKILL_CRITICAL_HIT_CHANCEPERCENT = 53,
+ 	CONDITION_PARAM_SKILL_CRITICAL_HIT_DAMAGEPERCENT = 54,
+ 	CONDITION_PARAM_SKILL_LIFE_LEECH_CHANCEPERCENT = 55,
+ 	CONDITION_PARAM_SKILL_LIFE_LEECH_AMOUNTPERCENT = 56,
+ 	CONDITION_PARAM_SKILL_MANA_LEECH_CHANCEPERCENT = 57,
+ 	CONDITION_PARAM_SKILL_MANA_LEECH_AMOUNTPERCENT = 58,
 };
+
 
 enum BlockType_t : uint8_t {
 	BLOCK_NONE,
@@ -241,12 +273,19 @@ enum skills_t : uint8_t {
 	SKILL_DISTANCE = 4,
 	SKILL_SHIELD = 5,
 	SKILL_FISHING = 6,
+	
+	SKILL_CRITICAL_HIT_CHANCE = 7,
+ 	SKILL_CRITICAL_HIT_DAMAGE = 8,
+ 	SKILL_LIFE_LEECH_CHANCE = 9,
+ 	SKILL_LIFE_LEECH_AMOUNT = 10,
+ 	SKILL_MANA_LEECH_CHANCE = 11,
+ 	SKILL_MANA_LEECH_AMOUNT = 12,
 
-	SKILL_MAGLEVEL = 7,
-	SKILL_LEVEL = 8,
+	SKILL_MAGLEVEL = 13,
+	SKILL_LEVEL = 14,
 
 	SKILL_FIRST = SKILL_FIST,
-	SKILL_LAST = SKILL_FISHING
+	SKILL_LAST = SKILL_MANA_LEECH_AMOUNT
 };
 
 enum stats_t {
@@ -389,6 +428,8 @@ enum ReturnValue {
 	RETURNVALUE_CANONLYUSEONESHIELD,
 	RETURNVALUE_NOPARTYMEMBERSINRANGE,
 	RETURNVALUE_YOUARENOTTHEOWNER,
+	RETURNVALUE_REWARDCHESTISEMPTY,
+	RETURNVALUE_NOPARTICIPED,
 };
 
 enum SpeechBubble_t
@@ -451,10 +492,16 @@ struct Outfit_t {
 };
 
 struct LightInfo {
-	uint8_t level = 0;
-	uint8_t color = 0;
-	LightInfo() = default;
-	LightInfo(uint8_t level, uint8_t color) : level(level), color(color) {}
+	uint8_t level;
+	uint8_t color;
+	LightInfo() {
+		level = 0;
+		color = 0;
+	}
+	LightInfo(uint8_t _level, uint8_t _color) {
+		level = _level;
+		color = _color;
+	}
 };
 
 struct ShopInfo {
@@ -553,11 +600,13 @@ struct CombatDamage
 	} primary, secondary;
 
 	CombatOrigin origin;
+	bool critical;
 	CombatDamage()
 	{
 		origin = ORIGIN_NONE;
 		primary.type = secondary.type = COMBAT_NONE;
 		primary.value = secondary.value = 0;
+		critical = false;
 	}
 };
 
